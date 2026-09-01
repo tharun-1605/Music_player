@@ -1,0 +1,14 @@
+.dart_tool/
+build/
+.android/
+.ios/
+.idea/
+*.iml
+.git
+.gitignore
+test/
+linux/
+macos/
+windows/
+android/
+ios/

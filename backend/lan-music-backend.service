@@ -1,0 +1,13 @@
+[Unit]
+Description=LAN Music Streaming Server (FastAPI)
+After=network.target network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/media/tharun/App/Music_player/backend
+ExecStart=/media/tharun/App/Music_player/backend/.venv/bin/python3 run.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

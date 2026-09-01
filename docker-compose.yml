@@ -1,0 +1,41 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: music_player_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MUSIC_LIBRARY_PATH=/music
+      - DB_PATH=/app/data/music_server.db
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # Mount music directory (read-only for security)
+      - ${MUSIC_PATH:-/media/tharun/HD/Songs}:/music:ro
+      # Persistent storage for SQLite database and cover art cache
+      - backend_data:/app/data
+      - backend_cache:/app/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  frontend:
+    build:
+      context: ./mobile_app
+      dockerfile: Dockerfile
+    container_name: music_player_frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+  backend_cache:
