@@ -6,6 +6,7 @@ from app.config import settings
 from app.database import engine, Base, SessionLocal
 from app.models import Song
 from app.scanner import scanner_instance
+from app.mdns import mdns_instance
 
 from app.api import system, songs, artists, albums, search, playlists, favorites, history
 
@@ -23,7 +24,13 @@ async def lifespan(app: FastAPI):
     finally:
         db.close()
 
+    # Start mDNS registration for dynamic LAN discovery
+    mdns_instance.start()
+
     yield
+
+    # Cleanup mDNS
+    mdns_instance.stop()
 
 app = FastAPI(
     title="LAN Music Streaming Backend",

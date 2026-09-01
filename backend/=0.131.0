@@ -1,0 +1,9 @@
+Collecting zeroconf
+  Downloading zeroconf-0.151.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (5.9 kB)
+Collecting ifaddr>=0.1.7 (from zeroconf)
+  Downloading ifaddr-0.2.0-py3-none-any.whl.metadata (4.9 kB)
+Downloading zeroconf-0.151.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.4 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.4/1.4 MB 1.5 MB/s eta 0:00:00
+Downloading ifaddr-0.2.0-py3-none-any.whl (12 kB)
+Installing collected packages: ifaddr, zeroconf
+Successfully installed ifaddr-0.2.0 zeroconf-0.151.3

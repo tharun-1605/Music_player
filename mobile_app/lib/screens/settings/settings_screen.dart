@@ -4,6 +4,7 @@ import '../../config/api_config.dart';
 import '../../providers/music_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
+import '../../services/server_discovery_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -16,7 +17,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late TextEditingController _urlController;
   ConnectionTestResult? _testResult;
   bool _testing = false;
+  bool _discovering = false;
   bool _scanning = false;
+  String? _discoveryMessage;
 
   @override
   void initState() {
@@ -28,6 +31,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _urlController.dispose();
     super.dispose();
+  }
+
+  Future<void> _autoDiscoverServer() async {
+    setState(() {
+      _discovering = true;
+      _discoveryMessage = 'Scanning local Wi-Fi network for Music Server...';
+    });
+
+    final result = await ServerDiscoveryService.discoverServer();
+
+    if (mounted) {
+      setState(() {
+        _discovering = false;
+        _discoveryMessage = result.message;
+        if (result.success && result.discoveredUrl != null) {
+          _urlController.text = result.discoveredUrl!;
+        }
+      });
+
+      if (result.success) {
+        _testConnection();
+      }
+    }
   }
 
   Future<void> _testConnection() async {
@@ -101,23 +127,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryAccent,
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primaryAccent,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          icon: _discovering
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.radar, color: Colors.white),
+                          label: const Text('Auto-Discover Server', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          onPressed: _discovering ? null : _autoDiscoverServer,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white24),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        icon: _testing
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : const Icon(Icons.wifi_find, color: Colors.white),
-                        label: const Text('Test Connection', style: TextStyle(color: Colors.white)),
                         onPressed: _testing ? null : _testConnection,
+                        child: _testing
+                            ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Text('Test'),
                       ),
                     ],
                   ),
+                  if (_discoveryMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _discoveryMessage!,
+                      style: const TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                  ],
                   if (_testResult != null) ...[
                     const SizedBox(height: 12),
                     Container(
