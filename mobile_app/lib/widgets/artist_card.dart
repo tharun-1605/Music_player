@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/api_config.dart';
 import '../models/artist.dart';
 import '../theme/app_theme.dart';
 
@@ -27,13 +28,22 @@ class ArtistCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircleAvatar(
-              radius: 33,
-              backgroundColor: AppTheme.primaryAccent.withValues(alpha: 0.2),
-              child: const Icon(
-                Icons.person,
-                size: 38,
-                color: AppTheme.primaryAccent,
+            ClipOval(
+              child: Image.network(
+                '${ApiConfig.apiBaseUrl}/artists/${artist.id}/image',
+                width: 66,
+                height: 66,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 66,
+                  height: 66,
+                  color: AppTheme.primaryAccent.withValues(alpha: 0.2),
+                  child: const Icon(
+                    Icons.person,
+                    size: 38,
+                    color: AppTheme.primaryAccent,
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 8),

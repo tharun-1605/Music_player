@@ -6,6 +6,8 @@ import '../../providers/music_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/song_tile.dart';
 
+import '../../config/api_config.dart';
+
 class ArtistDetailScreen extends ConsumerWidget {
   final Artist artist;
 
@@ -38,10 +40,19 @@ class ArtistDetailScreen extends ConsumerWidget {
               Center(
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundColor: AppTheme.primaryAccent.withValues(alpha: 0.2),
-                      child: const Icon(Icons.person, size: 60, color: AppTheme.primaryAccent),
+                    ClipOval(
+                      child: Image.network(
+                        '${ApiConfig.apiBaseUrl}/artists/${artist.id}/image',
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 100,
+                          height: 100,
+                          color: AppTheme.primaryAccent.withValues(alpha: 0.2),
+                          child: const Icon(Icons.person, size: 60, color: AppTheme.primaryAccent),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(

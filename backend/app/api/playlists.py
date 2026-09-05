@@ -44,7 +44,7 @@ def _ensure_favorites_playlist(db: Session) -> Playlist:
 def list_playlists(db: Session = Depends(get_db)):
     _ensure_favorites_playlist(db)
 
-    playlists = db.query(Playlist).order_by(asc(Playlist.is_system).desc(), asc(Playlist.name)).all()
+    playlists = db.query(Playlist).order_by(Playlist.is_system.desc(), Playlist.name.asc()).all()
     results = []
     for pl in playlists:
         if pl.is_system == 1:

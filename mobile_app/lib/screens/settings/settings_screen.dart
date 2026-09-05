@@ -519,7 +519,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 children: [
                   const Row(
                     children: [
-                      Icon(Icons.code, color: AppTheme.primaryAccent),
+                      GithubLogoIcon(size: 22, color: AppTheme.primaryAccent),
                       SizedBox(width: 10),
                       Text('GitHub Repository', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
                     ],
@@ -594,7 +594,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 const CircleAvatar(
                   radius: 14,
                   backgroundColor: AppTheme.primaryAccent,
-                  child: Icon(Icons.person, size: 16, color: Colors.white),
+                  child: GithubLogoIcon(size: 16, color: Colors.white),
                 ),
                 const SizedBox(width: 10),
                 Text(devName, style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
@@ -643,5 +643,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
   }
+}
+
+class GithubLogoIcon extends StatelessWidget {
+  final double size;
+  final Color color;
+
+  const GithubLogoIcon({super.key, this.size = 20, this.color = Colors.white});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(size, size),
+      painter: _GithubLogoPainter(color: color),
+    );
+  }
+}
+
+class _GithubLogoPainter extends CustomPainter {
+  final Color color;
+  _GithubLogoPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    final scaleX = size.width / 24.0;
+    final scaleY = size.height / 24.0;
+    canvas.save();
+    canvas.scale(scaleX, scaleY);
+
+    final path = Path();
+    path.moveTo(12, 0);
+    path.cubicTo(5.37, 0, 0, 5.37, 0, 12);
+    path.cubicTo(0, 17.31, 3.435, 21.795, 8.205, 23.385);
+    path.cubicTo(8.805, 23.49, 9.03, 23.13, 9.03, 22.815);
+    path.cubicTo(9.03, 22.53, 9.015, 21.585, 9.015, 20.535);
+    path.cubicTo(5.67, 21.255, 4.965, 19.155, 4.965, 19.155);
+    path.cubicTo(4.425, 17.775, 3.645, 17.415, 3.645, 17.415);
+    path.cubicTo(2.55, 16.665, 3.735, 16.68, 3.735, 16.68);
+    path.cubicTo(4.95, 16.77, 5.58, 17.925, 5.58, 17.925);
+    path.cubicTo(6.645, 19.755, 8.385, 19.23, 9.075, 18.915);
+    path.cubicTo(9.18, 18.135, 9.495, 17.61, 9.84, 17.31);
+    path.cubicTo(7.17, 17.01, 4.365, 15.975, 4.365, 11.37);
+    path.cubicTo(4.365, 10.065, 4.83, 8.985, 5.595, 8.145);
+    path.cubicTo(5.475, 7.845, 5.055, 6.615, 5.715, 4.965);
+    path.cubicTo(5.715, 4.965, 6.72, 4.65, 9.015, 6.21);
+    path.cubicTo(9.975, 5.94, 11.01, 5.805, 12.045, 5.805);
+    path.cubicTo(13.08, 5.805, 14.115, 5.94, 15.075, 6.21);
+    path.cubicTo(17.37, 4.65, 18.375, 4.965, 18.375, 4.965);
+    path.cubicTo(19.035, 6.615, 18.615, 7.845, 18.495, 8.145);
+    path.cubicTo(19.26, 8.985, 19.725, 10.05, 19.725, 11.37);
+    path.cubicTo(19.725, 15.99, 16.915, 17.01, 14.235, 17.31);
+    path.cubicTo(14.67, 17.685, 15.045, 18.42, 15.045, 19.56);
+    path.cubicTo(15.045, 21.195, 15.03, 22.515, 15.03, 22.815);
+    path.cubicTo(15.03, 23.13, 15.255, 23.505, 15.87, 23.385);
+    path.cubicTo(20.64, 21.795, 24, 17.31, 24, 12);
+    path.cubicTo(24, 5.37, 18.63, 0, 12, 0);
+    path.close();
+
+    canvas.drawPath(path, paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 

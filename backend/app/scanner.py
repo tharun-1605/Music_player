@@ -70,36 +70,68 @@ def normalize_movie_album(raw_album: str) -> str:
     clean = clean.strip(' -')
     return clean if clean else title
 
+CANONICAL_ARTIST_MAP = {
+    'rahman': 'A. R. Rahman',
+    'a.r. rahman': 'A. R. Rahman',
+    'ar rahman': 'A. R. Rahman',
+    'a r rahman': 'A. R. Rahman',
+    'anirudh': 'Anirudh Ravichander',
+    'anirudh ravichander': 'Anirudh Ravichander',
+    'harris jayaraj': 'Harris Jayaraj',
+    'harris': 'Harris Jayaraj',
+    'yuvan': 'Yuvan Shankar Raja',
+    'yuvan shankar raja': 'Yuvan Shankar Raja',
+    'yuvan shankar': 'Yuvan Shankar Raja',
+    'g.v. prakash': 'G. V. Prakash Kumar',
+    'g. v. prakash': 'G. V. Prakash Kumar',
+    'g.v. prakash kumar': 'G. V. Prakash Kumar',
+    'g. v. prakash kumar': 'G. V. Prakash Kumar',
+    'gv prakash': 'G. V. Prakash Kumar',
+    'santhosh narayanan': 'Santhosh Narayanan',
+    'devi sri prasad': 'Devi Sri Prasad',
+    'dsp': 'Devi Sri Prasad',
+    'ilaiyaraaja': 'Ilaiyaraaja',
+    'ilayaraja': 'Ilaiyaraaja',
+    'ilaiyaraja': 'Ilaiyaraaja',
+    'd. imman': 'D. Imman',
+    'imman': 'D. Imman',
+    'vidyasagar': 'Vidyasagar',
+    'hiphop tamizha': 'Hiphop Tamizha',
+    'sai abhyankkar': 'Sai Abhyankkar',
+    'sam c.s.': 'Sam C.S.',
+    'sam cs': 'Sam C.S.',
+    'govind vasantha': 'Govind Vasantha',
+    'sid sriram': 'Sid Sriram',
+    'sean roldan': 'Sean Roldan',
+    'vijay antony': 'Vijay Antony',
+    'ghibran': 'Ghibran',
+    'deva': 'Deva',
+    's. a. rajkumar': 'S. A. Rajkumar',
+}
+
 def extract_primary_artist(artist_list: List[str]) -> str:
-    composer_counts = Counter()
-    for a_str in artist_list:
-        if not a_str:
-            continue
-        for comp in KNOWN_COMPOSERS:
-            pattern = r'(?<![A-Za-z0-9])' + re.escape(comp) + r'(?![A-Za-z0-9])'
-            if re.search(pattern, a_str, re.IGNORECASE):
-                canonical = comp
-                if 'rahman' in comp.lower():
-                    canonical = 'A.R. Rahman'
-                elif 'g.v.' in comp.lower() or 'g. v.' in comp.lower():
-                    canonical = 'G. V. Prakash Kumar'
-                elif 'ilaiyaraaja' in comp.lower() or 'ilayaraja' in comp.lower():
-                    canonical = 'Ilaiyaraaja'
-                composer_counts[canonical] += 1
-
-    if composer_counts:
-        return composer_counts.most_common(1)[0][0]
-
-    primaries = []
     for a_str in artist_list:
         if not a_str or a_str == 'Unknown Artist':
             continue
-        first = re.split(r'[,;&]|feat\.|ft\.|with', a_str, flags=re.IGNORECASE)[0].strip()
-        if first:
-            primaries.append(first)
 
-    if primaries:
-        return Counter(primaries).most_common(1)[0][0]
+        # Clean bracketed tags
+        cleaned = re.sub(r'[\(\[\{].*?[\)\]\}]', '', a_str).strip()
+
+        # Split by delimiters: comma, slash, semicolon, feat, ft, &, with
+        first_segment = re.split(r'[,;/]|feat\.|ft\.|&|\bwith\b', cleaned, flags=re.IGNORECASE)[0].strip()
+
+        if not first_segment:
+            continue
+
+        first_lower = first_segment.lower()
+
+        # Check canonical map for exact or substring match
+        for key, canonical in CANONICAL_ARTIST_MAP.items():
+            if key == first_lower or (len(key) > 4 and key in first_lower):
+                return canonical
+
+        return first_segment
+
     return 'Unknown Artist'
 
 class LibraryScanner:
@@ -298,16 +330,23 @@ class LibraryScanner:
 
         db.add_all(albums_to_add)
 
-        artist_counts = db.query(
-            Song.artist,
-            func.count(Song.id),
-            func.count(func.distinct(Song.album))
-        ).group_by(Song.artist).all()
+        artist_song_map: Dict[str, List[Song]] = {}
+        for song in all_songs:
+            primary_name = extract_primary_artist([song.artist])
+            if primary_name:
+                artist_song_map.setdefault(primary_name, []).append(song)
 
-        artists_to_add = [
-            Artist(name=a[0], song_count=a[1], album_count=a[2])
-            for a in artist_counts if a[0]
-        ]
+        artists_to_add = []
+        for primary_name, songs_list in artist_song_map.items():
+            distinct_albums = len(set(s.album for s in songs_list if s.album))
+            artists_to_add.append(
+                Artist(
+                    name=primary_name,
+                    song_count=len(songs_list),
+                    album_count=max(1, distinct_albums)
+                )
+            )
+
         db.add_all(artists_to_add)
         db.commit()
 

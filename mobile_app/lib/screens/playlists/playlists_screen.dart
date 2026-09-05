@@ -227,9 +227,59 @@ class PlaylistsScreen extends ConsumerWidget {
           color: AppTheme.primaryAccent,
           onRefresh: () async => ref.invalidate(playlistsProvider),
           child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              const SizedBox(height: 200),
-              Center(child: Text('Failed to load playlists: $err', style: const TextStyle(color: Colors.redAccent))),
+              Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.primaryAccent.withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  leading: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryAccent.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.offline_pin, color: AppTheme.primaryAccent, size: 28),
+                  ),
+                  title: const Text(
+                    'Downloaded Music',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.primaryAccent),
+                  ),
+                  subtitle: Text(
+                    'Offline Songs & Playlists • $downloadedCount tracks',
+                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                  ),
+                  trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DownloadedSongsScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 60),
+              const Icon(Icons.cloud_off, size: 48, color: AppTheme.textMuted),
+              const SizedBox(height: 12),
+              const Center(
+                child: Text(
+                  'Server Offline or Unreachable',
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Center(
+                child: Text(
+                  'Pull down to refresh or access Downloaded Music above.',
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                ),
+              ),
             ],
           ),
         ),

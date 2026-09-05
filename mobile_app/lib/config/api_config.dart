@@ -1,15 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   static const String _keyBaseUrl = 'server_base_url';
-  static const String defaultUrl = 'http://192.168.31.224:8000';
+  static const String defaultUrl = 'http://localhost:8000';
 
   static String _baseUrl = defaultUrl;
 
-  static String get baseUrl => _baseUrl;
+  static String get baseUrl {
+    if (kIsWeb) {
+      final webHost = (Uri.base.host.isNotEmpty && Uri.base.host != '0.0.0.0') ? Uri.base.host : 'localhost';
+      if (_baseUrl.contains('.local') || _baseUrl == defaultUrl || _baseUrl.isEmpty) {
+        return 'http://$webHost:8000';
+      }
+    }
+    return _baseUrl;
+  }
 
   static String get apiBaseUrl {
-    var base = _baseUrl.trim();
+    var base = baseUrl.trim();
     while (base.endsWith('/')) {
       base = base.substring(0, base.length - 1);
     }

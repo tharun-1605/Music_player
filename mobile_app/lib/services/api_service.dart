@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -165,31 +166,47 @@ class ApiService {
   }
 
   Future<List<Song>> getFavorites() async {
-    final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/favorites'));
-    if (res.statusCode == 200) {
-      final List list = jsonDecode(res.body);
-      return list.map((s) => Song.fromJson(s as Map<String, dynamic>)).toList();
+    try {
+      final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/favorites'));
+      if (res.statusCode == 200) {
+        final List list = jsonDecode(res.body);
+        return list.map((s) => Song.fromJson(s as Map<String, dynamic>)).toList();
+      }
+    } catch (e) {
+      debugPrint("Error fetching favorites: $e");
     }
-    throw Exception('Failed to fetch favorites');
+    return [];
   }
 
   Future<bool> addFavorite(int songId) async {
-    final res = await _client.post(Uri.parse('${ApiConfig.apiBaseUrl}/favorites/$songId'));
-    return res.statusCode == 201 || res.statusCode == 200;
+    try {
+      final res = await _client.post(Uri.parse('${ApiConfig.apiBaseUrl}/favorites/$songId'));
+      return res.statusCode == 201 || res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<bool> removeFavorite(int songId) async {
-    final res = await _client.delete(Uri.parse('${ApiConfig.apiBaseUrl}/favorites/$songId'));
-    return res.statusCode == 200;
+    try {
+      final res = await _client.delete(Uri.parse('${ApiConfig.apiBaseUrl}/favorites/$songId'));
+      return res.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
   }
 
   Future<List<Playlist>> getPlaylists() async {
-    final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/playlists'));
-    if (res.statusCode == 200) {
-      final List list = jsonDecode(res.body);
-      return list.map((p) => Playlist.fromJson(p as Map<String, dynamic>)).toList();
+    try {
+      final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/playlists'));
+      if (res.statusCode == 200) {
+        final List list = jsonDecode(res.body);
+        return list.map((p) => Playlist.fromJson(p as Map<String, dynamic>)).toList();
+      }
+    } catch (e) {
+      debugPrint("Error fetching playlists: $e");
     }
-    throw Exception('Failed to fetch playlists');
+    return [];
   }
 
   Future<Playlist> createPlaylist(String name) async {
