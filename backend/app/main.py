@@ -15,14 +15,9 @@ async def lifespan(app: FastAPI):
     # Create DB tables
     Base.metadata.create_all(bind=engine)
 
-    # Initial scan if database is empty
-    db = SessionLocal()
-    try:
-        count = db.query(Song).count()
-        if count == 0:
-            scanner_instance.start_scan()
-    finally:
-        db.close()
+    # Automatically start music library scan on startup
+    scanner_instance.start_scan()
+
 
     # Start mDNS registration for dynamic LAN discovery
     mdns_instance.start()

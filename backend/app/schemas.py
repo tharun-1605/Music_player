@@ -90,3 +90,19 @@ class ScanStatusResponse(BaseModel):
     total_songs: int
     total_artists: int
     total_albums: int
+
+class DirectoryUpdateRequest(BaseModel):
+    path: str
+    rescan: Optional[bool] = True
+
+class DirectoryItem(BaseModel):
+    name: str
+    path: str
+    is_dir: bool
+    has_music: Optional[bool] = False
+
+class DirectoryBrowseResponse(BaseModel):
+    current_path: str
+    parent_path: Optional[str] = None
+    items: List[DirectoryItem]
+

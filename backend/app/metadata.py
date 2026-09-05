@@ -191,19 +191,35 @@ def extract_metadata(file_path: str) -> Dict[str, Any]:
     except Exception:
         pass
 
-    # Infer artist from directory structure if artist is unknown
-    if artist == "Unknown Artist" or not artist:
-        parts = path.parts
-        for part in parts:
-            if "Discography" in part:
-                artist = part.replace("Discography", "").strip()
-                break
+    # Infer album and artist from directory structure relative to music library root
+    try:
+        lib_path = Path(settings.MUSIC_LIBRARY_PATH)
+        rel_path = path.relative_to(lib_path)
+        rel_parts = [p for p in rel_path.parts[:-1] if p]
+    except Exception:
+        rel_parts = [p for p in path.parent.parts if p]
+
+    if rel_parts:
+        parent_folder = rel_parts[-1]
+        if (not album or album == "Unknown Album") and parent_folder:
+            album = parent_folder
+
+        if len(rel_parts) >= 2:
+            grandparent_folder = rel_parts[-2]
+            if (not artist or artist == "Unknown Artist") and grandparent_folder:
+                artist = grandparent_folder.replace("Discography", "").strip()
+
+        if not artist or artist == "Unknown Artist":
+            for part in rel_parts:
+                if "Discography" in part:
+                    artist = part.replace("Discography", "").strip()
+                    break
 
     return {
         "title": title or path.stem,
         "artist": artist or "Unknown Artist",
         "album": album or "Unknown Album",
-        "album_artist": album_artist or artist or "Unknown Artist",
+        "album_artist": album_artist if (album_artist and album_artist != "Unknown Artist") else (artist or "Unknown Artist"),
         "genre": genre or "Unknown",
         "year": year,
         "track_number": track_number,
@@ -217,3 +233,4 @@ def extract_metadata(file_path: str) -> Dict[str, Any]:
         "cover_art_path": cover_art_path,
         "mtime": mtime
     }
+

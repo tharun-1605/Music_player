@@ -41,7 +41,7 @@ class LanMusicApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: MaterialApp(
-        title: 'Spotify LAN',
+        title: 'AudioPhillia',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.spotifyTheme,
         home: const MainNavigationScreen(),

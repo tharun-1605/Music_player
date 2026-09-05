@@ -5,6 +5,8 @@ import '../theme/app_theme.dart';
 import '../widgets/artwork.dart';
 import '../providers/music_providers.dart';
 import '../screens/player/player_screen.dart';
+import '../widgets/add_to_playlist_dialog.dart';
+
 
 class SongTile extends ConsumerWidget {
   final Song song;
@@ -108,9 +110,17 @@ class SongTile extends ConsumerWidget {
                 ref.invalidate(favoritesProvider);
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.playlist_add, color: AppTheme.textMuted, size: 22),
+              tooltip: 'Add to Playlist',
+              onPressed: () {
+                showAddToPlaylistBottomSheet(context, ref, song);
+              },
+            ),
           ],
         ),
       ),
     );
   }
 }
+

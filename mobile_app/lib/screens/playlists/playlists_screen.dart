@@ -64,83 +64,158 @@ class PlaylistsScreen extends ConsumerWidget {
       body: playlistsAsync.when(
         data: (playlists) {
           if (playlists.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            return RefreshIndicator(
+              color: AppTheme.primaryAccent,
+              onRefresh: () async => ref.invalidate(playlistsProvider),
+              child: ListView(
                 children: [
-                  const Icon(Icons.playlist_add, size: 64, color: AppTheme.textMuted),
-                  const SizedBox(height: 12),
-                  const Text('No playlists yet', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
-                  const SizedBox(height: 16),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryAccent),
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    label: const Text('Create Playlist', style: TextStyle(color: Colors.white)),
-                    onPressed: () => _showCreateDialog(context, ref),
+                  const SizedBox(height: 150),
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.playlist_add, size: 64, color: AppTheme.textMuted),
+                        const SizedBox(height: 12),
+                        const Text('No playlists yet', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryAccent),
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          label: const Text('Create Playlist', style: TextStyle(color: Colors.white)),
+                          onPressed: () => _showCreateDialog(context, ref),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             );
           }
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: playlists.length,
-            itemBuilder: (context, index) {
-              final playlist = playlists[index];
-              return ListTile(
-                leading: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryAccent.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.queue_music, color: AppTheme.primaryAccent),
-                ),
-                title: Text(playlist.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('${playlist.songCount} songs', style: const TextStyle(color: AppTheme.textMuted)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                  onPressed: () async {
-                    final api = ref.read(apiServiceProvider);
-                    await api.deletePlaylist(playlist.id);
-                    ref.invalidate(playlistsProvider);
-                  },
-                ),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PlaylistDetailScreen(playlist: playlist),
+          return RefreshIndicator(
+            color: AppTheme.primaryAccent,
+            onRefresh: () async => ref.invalidate(playlistsProvider),
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(16),
+              itemCount: playlists.length,
+              itemBuilder: (context, index) {
+                final playlist = playlists[index];
+                return ListTile(
+                  leading: Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryAccent.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                  );
-                },
-              );
-            },
+                    child: const Icon(Icons.queue_music, color: AppTheme.primaryAccent),
+                  ),
+                  title: Text(playlist.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: Text('${playlist.songCount} songs', style: const TextStyle(color: AppTheme.textMuted)),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                    onPressed: () async {
+                      final api = ref.read(apiServiceProvider);
+                      await api.deletePlaylist(playlist.id);
+                      ref.invalidate(playlistsProvider);
+                    },
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PlaylistDetailScreen(playlist: playlist),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Failed to load playlists: $err', style: const TextStyle(color: Colors.redAccent))),
+        error: (err, stack) => RefreshIndicator(
+          color: AppTheme.primaryAccent,
+          onRefresh: () async => ref.invalidate(playlistsProvider),
+          child: ListView(
+            children: [
+              const SizedBox(height: 200),
+              Center(child: Text('Failed to load playlists: $err', style: const TextStyle(color: Colors.redAccent))),
+            ],
+          ),
+        ),
       ),
+
     );
   }
 }
 
-class PlaylistDetailScreen extends ConsumerWidget {
+class PlaylistDetailScreen extends ConsumerStatefulWidget {
   final Playlist playlist;
 
   const PlaylistDetailScreen({super.key, required this.playlist});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<PlaylistDetailScreen> createState() => _PlaylistDetailScreenState();
+}
+
+class _PlaylistDetailScreenState extends ConsumerState<PlaylistDetailScreen> {
+  late Future<Playlist> _playlistFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaylist();
+  }
+
+  void _loadPlaylist() {
+    final api = ref.read(apiServiceProvider);
+    setState(() {
+      _playlistFuture = api.getPlaylistDetails(widget.playlist.id);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final api = ref.watch(apiServiceProvider);
     final playerService = ref.watch(audioPlayerServiceProvider);
 
     return Scaffold(
-      appBar: AppBar(title: Text(playlist.name)),
+      appBar: AppBar(
+        title: Text(widget.playlist.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+            tooltip: 'Delete Playlist',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  backgroundColor: AppTheme.cardColor,
+                  title: const Text('Delete Playlist', style: TextStyle(color: AppTheme.textPrimary)),
+                  content: Text('Are you sure you want to delete "${widget.playlist.name}"?', style: const TextStyle(color: AppTheme.textSecondary)),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
+                      onPressed: () => Navigator.pop(ctx, true),
+                      child: const Text('Delete', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await api.deletePlaylist(widget.playlist.id);
+                ref.invalidate(playlistsProvider);
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<Playlist>(
-        future: api.getPlaylistDetails(playlist.id),
+        future: _playlistFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -149,25 +224,74 @@ class PlaylistDetailScreen extends ConsumerWidget {
           final songs = detailedPlaylist?.songs ?? [];
 
           if (songs.isEmpty) {
-            return const Center(child: Text('No songs in playlist', style: TextStyle(color: AppTheme.textMuted)));
+            return const Center(
+              child: Text('No songs in playlist', style: TextStyle(color: AppTheme.textMuted)),
+            );
           }
 
-          return ListView.builder(
-            itemCount: songs.length,
-            itemBuilder: (context, index) {
-              final song = songs[index];
-              final isPlaying = playerService.currentSong?.id == song.id;
-              return SongTile(
-                song: song,
-                isPlaying: isPlaying,
-                onTap: () {
-                  playerService.playSongList(songs, initialIndex: index);
-                },
-              );
-            },
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryAccent,
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.play_arrow, color: Colors.white),
+                  label: Text('Play All (${songs.length} Songs)', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    playerService.playSongList(songs, initialIndex: 0);
+                  },
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: songs.length,
+                  itemBuilder: (context, index) {
+                    final song = songs[index];
+                    final isPlaying = playerService.currentSong?.id == song.id;
+                    return Stack(
+                      children: [
+                        SongTile(
+                          song: song,
+                          isPlaying: isPlaying,
+                          onTap: () {
+                            playerService.playSongList(songs, initialIndex: index);
+                          },
+                        ),
+                        Positioned(
+                          right: 48,
+                          top: 8,
+                          bottom: 8,
+                          child: Center(
+                            child: IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, color: Colors.redAccent, size: 20),
+                              tooltip: 'Remove from playlist',
+                              onPressed: () async {
+                                await api.removeSongFromPlaylist(widget.playlist.id, song.id);
+                                ref.invalidate(playlistsProvider);
+                                _loadPlaylist();
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('Removed "${song.title}" from playlist')),
+                                  );
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           );
         },
       ),
     );
   }
 }
+

@@ -22,6 +22,9 @@ class ArtworkImage extends StatelessWidget {
         ? ApiConfig.getAlbumCoverUrl(songId)
         : ApiConfig.getCoverUrl(songId);
 
+    final double calcIconSize = (size.isFinite && size > 0) ? size * 0.5 : 24.0;
+    final double calcProgressSize = (size.isFinite && size > 0) ? size * 0.35 : 18.0;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: Image.network(
@@ -36,7 +39,7 @@ class ArtworkImage extends StatelessWidget {
             color: AppTheme.cardColor,
             child: Icon(
               isAlbum ? Icons.album : Icons.music_note,
-              size: size * 0.5,
+              size: calcIconSize,
               color: AppTheme.primaryAccent,
             ),
           );
@@ -49,8 +52,8 @@ class ArtworkImage extends StatelessWidget {
             color: AppTheme.cardColor,
             child: Center(
               child: SizedBox(
-                width: size * 0.35,
-                height: size * 0.35,
+                width: calcProgressSize,
+                height: calcProgressSize,
                 child: const CircularProgressIndicator(
                   strokeWidth: 2,
                   color: AppTheme.primaryAccent,
@@ -62,4 +65,5 @@ class ArtworkImage extends StatelessWidget {
       ),
     );
   }
+
 }

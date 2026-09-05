@@ -145,7 +145,9 @@ class LibraryScanner:
         db = SessionLocal()
         try:
             library_dir = Path(settings.MUSIC_LIBRARY_PATH)
+            print(f"\n[LibraryScanner] Starting scan of music library at: {library_dir}")
             if not library_dir.exists() or not library_dir.is_dir():
+                print(f"[LibraryScanner] ERROR: Music directory '{library_dir}' does not exist or is not a directory.")
                 with self._lock:
                     self.status = "failed"
                 return
@@ -158,6 +160,7 @@ class LibraryScanner:
                         found_files.append(p)
 
             total = len(found_files)
+            print(f"[LibraryScanner] Found {total} audio files. Processing metadata...")
             with self._lock:
                 self.total_files = total
 
@@ -166,6 +169,7 @@ class LibraryScanner:
 
             missing_paths = set(existing_songs.keys()) - found_paths_set
             if missing_paths:
+                print(f"[LibraryScanner] Cleaning up {len(missing_paths)} removed files from database...")
                 db.query(Song).filter(Song.file_path.in_(missing_paths)).delete(synchronize_session=False)
                 db.commit()
 
@@ -239,16 +243,23 @@ class LibraryScanner:
 
             self._rebuild_artists_and_albums(db)
 
+            song_cnt = db.query(Song).count()
+            artist_cnt = db.query(Artist).count()
+            album_cnt = db.query(Album).count()
+            print(f"[LibraryScanner] Scan completed! DB now contains {song_cnt} songs, {artist_cnt} artists, and {album_cnt} albums.\n")
+
             with self._lock:
                 self.status = "completed"
                 self.last_scan_time = datetime.utcnow().isoformat()
                 self.current_file = None
 
         except Exception as scan_err:
+            print(f"[LibraryScanner] ERROR during scan: {scan_err}")
             with self._lock:
                 self.status = "failed"
         finally:
             db.close()
+
 
     def _rebuild_artists_and_albums(self, db: Session):
         db.query(Artist).delete()

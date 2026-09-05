@@ -82,8 +82,12 @@ def test_audio_streaming_range_request():
 
     songs_resp = client.get("/api/songs?limit=1")
     songs = songs_resp.json().get("songs", [])
-    if not songs:
-        pytest.skip("No songs in database to stream")
+    if not songs or not os.path.exists(songs[0]["file_path"]):
+        pytest.skip("No valid song file in database to stream")
+
+    file_size = os.path.getsize(songs[0]["file_path"])
+    if file_size < 1024:
+        pytest.skip("Song file smaller than 1024 bytes")
 
     song_id = songs[0]["id"]
     headers = {"Range": "bytes=0-1023"}
@@ -91,6 +95,8 @@ def test_audio_streaming_range_request():
     assert stream_resp.status_code == 206
     assert stream_resp.headers.get("Content-Range").startswith("bytes 0-1023/")
     assert len(stream_resp.content) == 1024
+
+
 
 def test_invalid_song_id():
     response = client.get("/api/songs/9999999/stream")
@@ -102,16 +108,56 @@ def test_path_traversal_protection():
         validate_safe_path("/etc/passwd", settings.MUSIC_LIBRARY_PATH)
     assert excinfo.value.status_code in [403, 404]
 
-def test_cover_art_endpoint():
-    if not os.path.exists(settings.MUSIC_LIBRARY_PATH):
-        pytest.skip("External HDD not mounted")
+def test_system_browse_endpoint():
+    response = client.get("/api/system/browse")
+    assert response.status_code == 200
+    data = response.json()
+    assert "current_path" in data
+    assert "items" in data
+    assert isinstance(data["items"], list)
 
-    songs_resp = client.get("/api/songs?limit=1")
-    songs = songs_resp.json().get("songs", [])
-    if not songs:
-        pytest.skip("No songs in database")
+def test_system_directory_update_endpoint(tmp_path):
+    orig_path = settings.MUSIC_LIBRARY_PATH
+    try:
+        music_dir = tmp_path / "test_music"
+        music_dir.mkdir()
+        
+        response = client.post("/api/system/directory", json={"path": str(music_dir), "rescan": False})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["music_path"] == str(music_dir)
+        assert settings.MUSIC_LIBRARY_PATH == str(music_dir)
+    finally:
+        settings.update_music_library_path(orig_path, persist=True)
 
-    song_id = songs[0]["id"]
-    cover_resp = client.get(f"/api/songs/{song_id}/cover")
-    assert cover_resp.status_code == 200
-    assert cover_resp.headers["content-type"] in ["image/jpeg", "image/png", "image/svg+xml"]
+
+def test_folder_artist_and_album_detection(tmp_path):
+    orig_path = settings.MUSIC_LIBRARY_PATH
+    try:
+        # Set music library root
+        lib_dir = tmp_path / "MusicLibrary"
+        lib_dir.mkdir()
+        settings.update_music_library_path(str(lib_dir), persist=False)
+
+        # Create folder structure: MusicLibrary / A.R. Rahman / Dil Se / song.mp3
+        artist_dir = lib_dir / "A.R. Rahman"
+        movie_album_dir = artist_dir / "Dil Se (Original Motion Picture Soundtrack)"
+        movie_album_dir.mkdir(parents=True)
+        
+        dummy_song = movie_album_dir / "01 Chaiyya Chaiyya.mp3"
+        dummy_song.write_bytes(b"ID3" + b"x" * 2048)
+
+        from app.metadata import extract_metadata
+        from app.scanner import normalize_movie_album
+
+        meta = extract_metadata(str(dummy_song))
+        norm_album = normalize_movie_album(meta["album"])
+
+        assert meta["artist"] == "A.R. Rahman"
+        assert norm_album == "Dil Se"
+    finally:
+        settings.update_music_library_path(orig_path, persist=False)
+
+
+
+

@@ -232,12 +232,19 @@ class ApiService {
     } catch (_) {}
   }
 
-  Future<List<Song>> getPlayHistory() async {
-    final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/history'));
+  Future<Map<String, dynamic>> getReplayStats() async {
+    final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/history/stats'));
     if (res.statusCode == 200) {
-      final List list = jsonDecode(res.body);
-      return list.map((s) => Song.fromJson(s as Map<String, dynamic>)).toList();
+      return jsonDecode(res.body) as Map<String, dynamic>;
     }
-    return [];
+    return {
+      "total_plays": 0,
+      "total_minutes": 0.0,
+      "month_minutes": 0.0,
+      "top_songs": [],
+      "top_albums": [],
+      "top_artists": []
+    };
   }
 }
+

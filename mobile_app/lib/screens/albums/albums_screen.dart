@@ -183,41 +183,52 @@ class _AlbumsScreenState extends ConsumerState<AlbumsScreen> {
               ),
               const SizedBox(height: 8),
               Expanded(
-                child: albums.isEmpty
-                    ? Center(
-                        child: Text(
-                          _searchQuery.isNotEmpty ? 'No albums match "$_searchQuery"' : 'No albums found',
-                          style: const TextStyle(color: AppTheme.textMuted),
+                child: RefreshIndicator(
+                  color: AppTheme.primaryAccent,
+                  onRefresh: () async => ref.invalidate(albumsProvider),
+                  child: albums.isEmpty
+                      ? ListView(
+                          children: [
+                            const SizedBox(height: 150),
+                            Center(
+                              child: Text(
+                                _searchQuery.isNotEmpty ? 'No albums match "$_searchQuery"' : 'No albums found',
+                                style: const TextStyle(color: AppTheme.textMuted),
+                              ),
+                            ),
+                          ],
+                        )
+                      : GridView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 0.82,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                          ),
+                          itemCount: albums.length,
+                          itemBuilder: (context, index) {
+                            final album = albums[index];
+                            return AlbumCard(
+                              album: album,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => AlbumDetailScreen(album: album),
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.82,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: albums.length,
-                        itemBuilder: (context, index) {
-                          final album = albums[index];
-                          return AlbumCard(
-                            album: album,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AlbumDetailScreen(album: album),
-                                ),
-                              );
-                            },
-                          );
-                        },
-                      ),
+                ),
               ),
             ],
           );
         },
+
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(
           child: Text('Failed to load albums: $err', style: const TextStyle(color: Colors.redAccent)),

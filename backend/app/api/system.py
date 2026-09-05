@@ -1,13 +1,21 @@
 import os
 from pathlib import Path
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
 from app.models import Song, Artist, Album
-from app.scanner import scanner_instance
-from app.schemas import SystemStatusResponse, ScanStatusResponse
+from app.scanner import scanner_instance, SUPPORTED_EXTENSIONS
+from app.schemas import (
+    SystemStatusResponse,
+    ScanStatusResponse,
+    DirectoryUpdateRequest,
+    DirectoryBrowseResponse,
+    DirectoryItem
+)
 
 router = APIRouter(prefix="/api", tags=["System"])
 
@@ -44,6 +52,73 @@ def get_system_status(db: Session = Depends(get_db)):
         "total_albums_in_db": total_albums
     }
 
+@router.get("/system/browse", response_model=DirectoryBrowseResponse)
+def browse_directories(path: Optional[str] = Query(None, description="Absolute path to browse")):
+    target_path = Path(path) if path else Path(settings.MUSIC_LIBRARY_PATH)
+    
+    if not target_path.exists() or not target_path.is_dir():
+        target_path = Path("/")
+
+    items = []
+    try:
+        entries = sorted(os.scandir(target_path), key=lambda e: (not e.is_dir(), e.name.lower()))
+        for entry in entries:
+            if entry.name.startswith('.'):
+                continue
+            if entry.is_dir(follow_symlinks=False):
+                entry_path = Path(entry.path)
+                has_music = False
+                try:
+                    for child in os.scandir(entry_path):
+                        if child.is_file(follow_symlinks=False):
+                            if Path(child.name).suffix.lower() in SUPPORTED_EXTENSIONS:
+                                has_music = True
+                                break
+                except Exception:
+                    pass
+                items.append(DirectoryItem(
+                    name=entry.name,
+                    path=str(entry_path),
+                    is_dir=True,
+                    has_music=has_music
+                ))
+    except PermissionError:
+        raise HTTPException(status_code=403, detail=f"Permission denied accessing directory: {target_path}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    parent_path = str(target_path.parent) if target_path.parent != target_path else None
+
+    return DirectoryBrowseResponse(
+        current_path=str(target_path),
+        parent_path=parent_path,
+        items=items
+    )
+
+@router.post("/system/directory")
+def update_music_directory(req: DirectoryUpdateRequest):
+    target_path = Path(req.path)
+    if not target_path.exists():
+        raise HTTPException(status_code=400, detail="Specified path does not exist")
+    if not target_path.is_dir():
+        raise HTTPException(status_code=400, detail="Specified path is not a directory")
+    if not os.access(target_path, os.R_OK):
+        raise HTTPException(status_code=403, detail="Directory is not readable by server")
+
+    success = settings.update_music_library_path(str(target_path.resolve()))
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to persist configuration")
+
+    scan_started = False
+    if req.rescan:
+        scan_started = scanner_instance.start_scan()
+
+    return {
+        "message": "Music directory path updated successfully",
+        "music_path": settings.MUSIC_LIBRARY_PATH,
+        "scan_initiated": scan_started
+    }
+
 @router.post("/library/scan")
 def trigger_library_scan():
     started = scanner_instance.start_scan()
@@ -54,3 +129,4 @@ def trigger_library_scan():
 @router.get("/library/status", response_model=ScanStatusResponse)
 def get_scan_status(db: Session = Depends(get_db)):
     return scanner_instance.get_status(db)
+

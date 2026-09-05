@@ -48,7 +48,16 @@ class _SongsScreenState extends ConsumerState<SongsScreen> {
       body: songsAsync.when(
         data: (songs) {
           if (songs.isEmpty) {
-            return const Center(child: Text('No songs found', style: TextStyle(color: AppTheme.textMuted)));
+            return RefreshIndicator(
+              color: AppTheme.primaryAccent,
+              onRefresh: () async => ref.invalidate(songsProvider),
+              child: ListView(
+                children: const [
+                  SizedBox(height: 200),
+                  Center(child: Text('No songs found', style: TextStyle(color: AppTheme.textMuted))),
+                ],
+              ),
+            );
           }
 
           final sortedSongs = List.of(songs);
@@ -66,26 +75,38 @@ class _SongsScreenState extends ConsumerState<SongsScreen> {
             return _order == 'asc' ? cmp : -cmp;
           });
 
-          return ListView.builder(
-            itemCount: sortedSongs.length,
-            itemBuilder: (context, index) {
-              final song = sortedSongs[index];
-              final isPlaying = playerService.currentSong?.id == song.id;
-              return SongTile(
-                song: song,
-                isPlaying: isPlaying,
-                onTap: () {
-                  playerService.playSongList(sortedSongs, initialIndex: index);
-                },
-              );
-            },
+          return RefreshIndicator(
+            color: AppTheme.primaryAccent,
+            onRefresh: () async => ref.invalidate(songsProvider),
+            child: ListView.builder(
+              itemCount: sortedSongs.length,
+              itemBuilder: (context, index) {
+                final song = sortedSongs[index];
+                final isPlaying = playerService.currentSong?.id == song.id;
+                return SongTile(
+                  song: song,
+                  isPlaying: isPlaying,
+                  onTap: () {
+                    playerService.playSongList(sortedSongs, initialIndex: index);
+                  },
+                );
+              },
+            ),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(
-          child: Text('Failed to load songs: $err', style: const TextStyle(color: Colors.redAccent)),
+        error: (err, stack) => RefreshIndicator(
+          color: AppTheme.primaryAccent,
+          onRefresh: () async => ref.invalidate(songsProvider),
+          child: ListView(
+            children: [
+              const SizedBox(height: 200),
+              Center(child: Text('Failed to load songs: $err', style: const TextStyle(color: Colors.redAccent))),
+            ],
+          ),
         ),
       ),
+
     );
   }
 }

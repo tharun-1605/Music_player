@@ -46,6 +46,15 @@ final playlistsProvider = FutureProvider<List<Playlist>>((ref) async {
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
+final userNameProvider = StateProvider<String>((ref) => 'Dharaneesh');
+
+final userAvatarIndexProvider = StateProvider<int>((ref) => 0);
+
+final replayStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
+  final api = ref.watch(apiServiceProvider);
+  return await api.getReplayStats();
+});
+
 final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final query = ref.watch(searchQueryProvider);
   if (query.trim().isEmpty) {
@@ -54,3 +63,4 @@ final searchResultsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
   final api = ref.watch(apiServiceProvider);
   return await api.search(query);
 });
+
