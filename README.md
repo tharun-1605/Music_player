@@ -1,9 +1,25 @@
-# LAN Personal Music Server & Streaming Application
+<div align="center">
+  <img src="mobile_app/logo.png" alt="AudioPhillia Logo" width="150"/>
+  <h1>AudioPhillia</h1>
+  <p><strong>A beautifully crafted, LAN-only personal music streaming application.</strong></p>
+</div>
 
-A complete, **LAN-only personal music streaming application** engineered to stream high-fidelity audio (FLAC, M4A, Opus, WAV, MP4, MP3, AAC, OGG) from a Linux PC (`192.168.31.224`) to an Android mobile device over your local Wi-Fi (Jio AirFiber LAN).
+---
+
+## 🎵 About AudioPhillia
+
+**AudioPhillia** is a complete personal music streaming ecosystem engineered to stream high-fidelity audio (FLAC, M4A, Opus, WAV, MP4, MP3, AAC, OGG) directly from your local PC to your mobile device over Wi-Fi. 
+
+Designed with modern, vibrant aesthetics and smooth micro-animations, AudioPhillia provides a premium listening experience without the need for an internet connection.
 
 > [!IMPORTANT]
-> **Zero Cloud Dependencies:** Requires **NO** Internet connection, cloud storage, Firebase, Supabase, Spotify API, or external web services.
+> **Zero Cloud Dependencies:** Requires **NO** Internet connection, cloud storage, Firebase, Supabase, Spotify API, or external web services. Your music, your network, your rules.
+
+## 👥 Developers
+
+AudioPhillia is actively developed and maintained by:
+- **[Tharun](https://github.com/tharun-1605)**
+- **[Dharaneesh](https://github.com/Dharaneesh20)**
 
 ---
 
@@ -18,7 +34,7 @@ A complete, **LAN-only personal music streaming application** engineered to stre
                                ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Python FastAPI Backend                   │
-│               (Listening on 0.0.0.0:8000)                    │
+│               (Listening on 0.0.0.0:8000)                   │
 ├─────────────────┬───────────────────┬───────────────────────┤
 │ SQLite Database │  Mutagen Scanner  │ HTTP Range Streamer   │
 │  (Indexed Meta) │ (Recursive Scan)  │ (206 Partial Content) │
@@ -27,7 +43,6 @@ A complete, **LAN-only personal music streaming application** engineered to stre
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                 External HDD Music Library                  │
-│                   /media/tharun/HD/Songs                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -35,38 +50,30 @@ A complete, **LAN-only personal music streaming application** engineered to stre
 
 ## ⚡ Quick Start
 
-### 1. Start the Backend Server (Zorin OS Linux)
+### 1. Start the Backend Server (Linux PC)
 
 ```bash
-cd /media/tharun/App/Music_player
-./start_backend.sh
-```
-
-Or manually:
-
-```bash
-cd /media/tharun/App/Music_player/backend
+cd backend
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 run.py
 ```
 
-The server will start listening at:
-`http://192.168.31.224:8000`
+The server will automatically start and listen at `http://0.0.0.0:8000`. It features **zero-conf mDNS** to automatically broadcast the server IP to the mobile app!
 
 ### 2. Verify Backend Health
 
 Open in your browser or run:
 ```bash
-curl http://192.168.31.224:8000/api/health
+curl http://localhost:8000/api/health
 ```
 
 Expected output:
 ```json
 {
   "status": "ok",
-  "library": "/media/tharun/HD/Songs"
+  "library": "/path/to/your/music"
 }
 ```
 
@@ -75,41 +82,30 @@ Expected output:
 ## 📱 Flutter Mobile Application Setup
 
 ### Prerequisites
-- Flutter SDK 3.24+ / 3.35+
-- Android Studio / Android Device on the same Jio AirFiber Wi-Fi
+- Flutter SDK 3.5.0+
+- Android Studio / Android Device on the same Wi-Fi Network
 
 ### Build & Run
 ```bash
-cd /media/tharun/App/Music_player/mobile_app
+cd mobile_app
 flutter pub get
 flutter run -d <your-android-device-or-emulator>
 ```
 
-### Server Settings Screen
-1. Open the app on your phone.
-2. Navigate to **Settings**.
-3. Enter your PC's LAN IP: `http://192.168.31.224:8000`.
-4. Tap **Test Connection** (measures response latency in milliseconds).
+### Auto-Discovery & Settings
+1. Open the **AudioPhillia** app on your phone.
+2. The app uses `zeroconf` to **automatically discover** the backend server on your Wi-Fi network!
+3. Alternatively, navigate to **Settings** and manually enter your PC's LAN IP if auto-discovery is blocked by your router.
 
 ---
 
 ## 🔒 Safety & Performance Features
 
 - **Strict Read-Only HDD Access:** The backend opens music files exclusively in read binary (`rb`) mode. Your music library files will **NEVER** be renamed, modified, moved, or deleted.
-- **Path Traversal Protection:** Validates canonical realpaths against `/media/tharun/HD/Songs`. Requests attempting path traversal outside the music folder are rejected (`403 Forbidden`).
-- **HTTP 206 Partial Content Streaming:** Supports seeking and instant playback of large FLAC/WAV files (90MB+) without loading entire files into system RAM.
-- **Embedded Artwork Caching:** Extracts album covers via Mutagen and caches them locally inside `backend/cache/covers/` using MD5 hashes.
-
----
-
-## 🌐 Finding Your Linux PC LAN IP
-
-If your router assigns a new local IP to your PC, find it by running:
-```bash
-hostname -I
-```
-
-Then update the Server URL inside the **Flutter Settings** screen.
+- **Path Traversal Protection:** Validates canonical realpaths. Requests attempting path traversal outside the music folder are rejected (`403 Forbidden`).
+- **HTTP 206 Partial Content Streaming:** Supports seeking and instant playback of large FLAC/WAV files without loading entire files into system RAM.
+- **Embedded Artwork Caching:** Extracts album covers via Mutagen and caches them locally using MD5 hashes for lightning-fast UI rendering.
+- **Persistent Mini-Player:** A premium, gesture-controlled mini-player with dynamic background progress seeking that hovers over all primary navigation tabs.
 
 ---
 
@@ -117,12 +113,12 @@ Then update the Server URL inside the **Flutter Settings** screen.
 
 ### Backend Test Suite
 ```bash
-cd /media/tharun/App/Music_player/backend
+cd backend
 PYTHONPATH=. .venv/bin/pytest -v
 ```
 
 ### Flutter Test Suite
 ```bash
-cd /media/tharun/App/Music_player/mobile_app
+cd mobile_app
 flutter test
 ```
