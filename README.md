@@ -4,6 +4,12 @@
   <p><strong>A beautifully crafted, LAN-only personal music streaming application.</strong></p>
 </div>
 
+<div align="center">
+  <a href="https://github.com/tharun-1605/Music_player/releases/latest/download/app-release.apk">
+    <img src="https://img.shields.io/badge/Download-Android%20APK-green?style=for-the-badge&logo=android" alt="Download Android APK" />
+  </a>
+</div>
+
 ---
 
 ## 🎵 About AudioPhillia
@@ -50,17 +56,29 @@ AudioPhillia is actively developed and maintained by:
 
 ## ⚡ Quick Start
 
-### 1. Start the Backend Server (Linux PC)
+### 1. Clone the Repository & Start the Backend Server
 
+First, clone the repository to your PC:
 ```bash
-cd backend
+git clone https://github.com/tharun-1605/Music_player.git
+cd Music_player/backend
+```
+
+Create a virtual environment, install requirements, and start the server:
+```bash
 python3 -m venv .venv
+# On Windows, use: .venv\Scripts\activate
 source .venv/bin/activate
 pip install -r requirements.txt
 python3 run.py
 ```
 
-The server will automatically start and listen at `http://0.0.0.0:8000`. It features **zero-conf mDNS** to automatically broadcast the server IP to the mobile app!
+The server will automatically start and listen at `http://0.0.0.0:8000`.
+
+**Finding your IP Address:**
+If auto-discovery fails, you will need your local IP address to connect the mobile app.
+- **Windows:** Run `ipconfig` in the Command Prompt and look for "IPv4 Address".
+- **Linux/Mac:** Run `ifconfig` (or `ip a`) in the terminal and look for your `inet` address.
 
 ### 2. Verify Backend Health
 
@@ -96,6 +114,16 @@ flutter run -d <your-android-device-or-emulator>
 1. Open the **AudioPhillia** app on your phone.
 2. The app uses `zeroconf` to **automatically discover** the backend server on your Wi-Fi network!
 3. Alternatively, navigate to **Settings** and manually enter your PC's LAN IP if auto-discovery is blocked by your router.
+
+### 🌍 Remote Streaming Outside LAN (Ngrok)
+If you want to listen to your music when you are away from home, you can use [Ngrok](https://ngrok.com/) to securely share your backend server over the internet.
+
+1. Install Ngrok and run the following command to expose port 8000:
+   ```bash
+   ngrok http 8000
+   ```
+2. Ngrok will provide a public Forwarding URL (e.g., `https://abcdef.ngrok-free.app`).
+3. Open the **AudioPhillia** app, go to Settings, and enter this Ngrok URL as the Server IP.
 
 ---
 
