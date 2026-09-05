@@ -234,3 +234,38 @@ def extract_metadata(file_path: str) -> Dict[str, Any]:
         "mtime": mtime
     }
 
+def extract_embedded_lyrics(file_path: str) -> Optional[str]:
+    try:
+        audio = mutagen.File(file_path)
+        if audio is None:
+            return None
+
+        if hasattr(audio, 'tags') and audio.tags:
+            tags = audio.tags
+            if isinstance(tags, ID3):
+                for key, tag in tags.items():
+                    if key.startswith('USLT') or key.startswith('SYLT'):
+                        if hasattr(tag, 'text'):
+                            return str(tag.text)
+            for key in ['USLT', 'LYRICS', 'UNSYNCEDLYRICS', 'lyrics']:
+                if key in tags:
+                    val = tags[key]
+                    if isinstance(val, list) and val:
+                        return str(val[0])
+                    return str(val)
+
+        if isinstance(audio, (FLAC, OggVorbis, OggOpus)):
+            tags = audio.tags or {}
+            for key in ['LYRICS', 'lyrics', 'UNSYNCEDLYRICS', 'unsyncedlyrics']:
+                if key in tags and tags[key]:
+                    return str(tags[key][0])
+
+        if isinstance(audio, MP4) and audio.tags:
+            if '\xa9lyr' in audio.tags and audio.tags['\xa9lyr']:
+                return str(audio.tags['\xa9lyr'][0])
+
+    except Exception:
+        pass
+    return None
+
+

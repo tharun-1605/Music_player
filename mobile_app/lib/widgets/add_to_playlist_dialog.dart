@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/song.dart';
+import '../models/album.dart';
 import '../providers/music_providers.dart';
 import '../theme/app_theme.dart';
 
@@ -15,6 +16,21 @@ void showAddToPlaylistBottomSheet(BuildContext context, WidgetRef ref, Song song
     builder: (modalContext) => SizedBox(
       height: MediaQuery.of(modalContext).size.height * 0.55,
       child: AddToPlaylistContent(song: song),
+    ),
+  );
+}
+
+void showAddAlbumToPlaylistBottomSheet(BuildContext context, WidgetRef ref, Album album) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: AppTheme.cardColor,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (modalContext) => SizedBox(
+      height: MediaQuery.of(modalContext).size.height * 0.55,
+      child: AddAlbumToPlaylistContent(album: album),
     ),
   );
 }
@@ -148,6 +164,91 @@ class AddToPlaylistContent extends ConsumerWidget {
                             if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Error adding song: $e'), backgroundColor: Colors.redAccent),
+                              );
+                            }
+                          }
+                        },
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Center(child: Text('Failed to load playlists: $err', style: const TextStyle(color: Colors.redAccent))),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class AddAlbumToPlaylistContent extends ConsumerWidget {
+  final Album album;
+  const AddAlbumToPlaylistContent({super.key, required this.album});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playlistsAsync = ref.watch(playlistsProvider);
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Add Album to Playlist',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppTheme.textMuted),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white10),
+            Expanded(
+              child: playlistsAsync.when(
+                data: (playlists) {
+                  if (playlists.isEmpty) {
+                    return const Center(
+                      child: Text('No playlists created yet.', style: TextStyle(color: AppTheme.textMuted)),
+                    );
+                  }
+                  return ListView.builder(
+                    itemCount: playlists.length,
+                    itemBuilder: (context, index) {
+                      final pl = playlists[index];
+                      return ListTile(
+                        leading: const Icon(Icons.queue_music, color: AppTheme.primaryAccent),
+                        title: Text(pl.name, style: const TextStyle(color: AppTheme.textPrimary)),
+                        subtitle: Text('${pl.songCount} songs', style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                        onTap: () async {
+                          final api = ref.read(apiServiceProvider);
+                          try {
+                            await api.addAlbumToPlaylist(pl.id, album.id);
+                            ref.invalidate(playlistsProvider);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Added album "${album.title}" to "${pl.name}"')),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
                               );
                             }
                           }

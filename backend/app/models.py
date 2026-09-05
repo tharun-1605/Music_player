@@ -49,6 +49,7 @@ class Playlist(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, unique=True, nullable=False)
+    is_system = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     songs = relationship("PlaylistSong", back_populates="playlist", cascade="all, delete-orphan")
@@ -82,3 +83,24 @@ class PlayHistory(Base):
     played_at = Column(DateTime, default=datetime.utcnow)
 
     song = relationship("Song")
+
+class Lyric(Base):
+    __tablename__ = "lyrics"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    song_id = Column(Integer, ForeignKey("songs.id", ondelete="CASCADE"), unique=True, nullable=False)
+    lyrics_source = Column(String, nullable=False, default="db")
+    plain_lyrics = Column(Text, nullable=True)
+    timed_lyrics = Column(Text, nullable=True) # JSON serialized list of {time, text}
+    language = Column(String, nullable=True)
+    offset = Column(Integer, default=0) # offset in milliseconds
+    is_manual = Column(Integer, default=1)
+    provider = Column(String, nullable=True)
+    match_confidence = Column(Float, default=1.0)
+    fetch_timestamp = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    song = relationship("Song")
+
+

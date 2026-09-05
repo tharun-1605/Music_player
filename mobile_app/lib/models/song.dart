@@ -59,6 +59,28 @@ class Song {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'artist': artist,
+      'album': album,
+      'album_artist': albumArtist,
+      'genre': genre,
+      'year': year,
+      'track_number': trackNumber,
+      'disc_number': discNumber,
+      'duration': duration,
+      'bitrate': bitrate,
+      'sample_rate': sampleRate,
+      'codec': codec,
+      'file_size': fileSize,
+      'file_path': filePath,
+      'cover_art_path': coverArtPath,
+      'is_favorite': isFavorite,
+    };
+  }
+
   Song copyWith({bool? isFavorite}) {
     return Song(
       id: id,

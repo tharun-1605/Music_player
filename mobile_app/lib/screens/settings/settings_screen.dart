@@ -7,6 +7,8 @@ import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../services/server_discovery_service.dart';
 import '../replay/music_replay_screen.dart';
+import 'downloads_settings_screen.dart';
+import 'equalizer_screen.dart';
 
 const List<IconData> kAvatarIcons = [
   Icons.person,
@@ -367,6 +369,90 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 20),
 
           // ==================================================
+          // OFFLINE DOWNLOADS SECTION
+          // ==================================================
+          const Text(
+            'Offline Downloads & Storage',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            color: AppTheme.surfaceColor,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: const CircleAvatar(
+                backgroundColor: AppTheme.primaryAccent,
+                child: Icon(Icons.download_done, color: Colors.white),
+              ),
+              title: const Text(
+                'Downloaded Songs & Cache',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              ),
+              subtitle: Builder(
+                builder: (context) {
+                  final downloadService = ref.watch(downloadServiceProvider);
+                  final count = downloadService.downloadedSongs.length;
+                  final sizeMb = (downloadService.getTotalStorageUsed() / (1024 * 1024)).toStringAsFixed(1);
+                  return Text(
+                    '$count songs stored ($sizeMb MB)',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  );
+                },
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DownloadsSettingsScreen()),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ==================================================
+          // EQUALIZER & AUDIO DSP SECTION
+          // ==================================================
+          const Text(
+            'Equalizer & Sound Presets',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 8),
+          Card(
+            color: AppTheme.surfaceColor,
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              leading: const CircleAvatar(
+                backgroundColor: AppTheme.primaryAccent,
+                child: Icon(Icons.equalizer, color: Colors.white),
+              ),
+              title: const Text(
+                '10-Band Equalizer & Presets',
+                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+              ),
+              subtitle: Builder(
+                builder: (context) {
+                  final eq = ref.watch(equalizerServiceProvider);
+                  return Text(
+                    eq.enabled ? 'Active Preset: ${eq.currentPresetName}' : 'Equalizer Disabled',
+                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  );
+                },
+              ),
+              trailing: const Icon(Icons.chevron_right, color: AppTheme.textMuted),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EqualizerScreen()),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ==================================================
           // MUSIC LIBRARY & STORAGE
           // ==================================================
           const Text(
@@ -431,8 +517,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: const [
+                  const Row(
+                    children: [
                       Icon(Icons.code, color: AppTheme.primaryAccent),
                       SizedBox(width: 10),
                       Text('GitHub Repository', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppTheme.textPrimary)),
@@ -442,10 +528,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   InkWell(
                     onTap: () => _openUrl('https://github.com/tharun-1605/Music_player'),
                     borderRadius: BorderRadius.circular(6),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 4, horizontal: 2),
                       child: Row(
-                        children: const [
+                        children: [
                           Icon(Icons.open_in_new, size: 14, color: Colors.cyanAccent),
                           SizedBox(width: 6),
                           Expanded(

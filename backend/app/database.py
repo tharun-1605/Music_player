@@ -25,3 +25,24 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def init_db_schema():
+    from sqlalchemy import text
+    Base.metadata.create_all(bind=engine)
+    with engine.connect() as conn:
+        cols = [row[1] for row in conn.execute(text("PRAGMA table_info(playlists)")).fetchall()]
+        if "is_system" not in cols:
+            conn.execute(text("ALTER TABLE playlists ADD COLUMN is_system INTEGER DEFAULT 0"))
+            conn.commit()
+
+        tables = [row[0] for row in conn.execute(text("SELECT name FROM sqlite_master WHERE type='table'")).fetchall()]
+        if "lyrics" in tables:
+            l_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(lyrics)")).fetchall()]
+            if "provider" not in l_cols:
+                conn.execute(text("ALTER TABLE lyrics ADD COLUMN provider TEXT"))
+            if "match_confidence" not in l_cols:
+                conn.execute(text("ALTER TABLE lyrics ADD COLUMN match_confidence FLOAT DEFAULT 1.0"))
+            if "fetch_timestamp" not in l_cols:
+                conn.execute(text("ALTER TABLE lyrics ADD COLUMN fetch_timestamp DATETIME"))
+            conn.commit()
+

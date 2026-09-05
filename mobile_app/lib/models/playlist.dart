@@ -4,6 +4,7 @@ class Playlist {
   final int id;
   final String name;
   final int songCount;
+  final bool isSystem;
   final String createdAt;
   final List<Song>? songs;
 
@@ -11,6 +12,7 @@ class Playlist {
     required this.id,
     required this.name,
     required this.songCount,
+    this.isSystem = false,
     required this.createdAt,
     this.songs,
   });
@@ -20,6 +22,7 @@ class Playlist {
       id: json['id'] as int,
       name: json['name'] as String? ?? 'Untitled Playlist',
       songCount: json['song_count'] as int? ?? 0,
+      isSystem: json['is_system'] as bool? ?? false,
       createdAt: json['created_at'] as String? ?? '',
       songs: json['songs'] != null
           ? (json['songs'] as List).map((s) => Song.fromJson(s as Map<String, dynamic>)).toList()

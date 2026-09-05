@@ -59,16 +59,52 @@ class SearchResponse(BaseModel):
 class PlaylistCreate(BaseModel):
     name: str
 
+class PlaylistUpdate(BaseModel):
+    name: str
+
 class PlaylistResponse(BaseModel):
     id: int
     name: str
     song_count: int = 0
+    is_system: bool = False
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
 
 class PlaylistDetailResponse(PlaylistResponse):
     songs: List[SongResponse]
+
+class PlaylistBatchSongs(BaseModel):
+    song_ids: List[int]
+
+class PlaylistReorder(BaseModel):
+    song_ids: List[int]
+
+class LyricLine(BaseModel):
+    time: float # in seconds
+    text: str
+
+class LyricResponse(BaseModel):
+    song_id: int
+    lyrics_source: str # 'db', 'lrc', 'embedded', 'manual', 'lrclib', 'unavailable'
+    plain_lyrics: Optional[str] = None
+    timed_lyrics: List[LyricLine] = []
+    is_synced: bool = False
+    language: Optional[str] = None
+    offset: int = 0 # in milliseconds
+    is_manual: bool = False
+    provider: Optional[str] = None
+    match_confidence: Optional[float] = 1.0
+    fetch_timestamp: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+class LyricCreate(BaseModel):
+    lrc_content: str
+    offset: Optional[int] = 0
+
+class LyricOffsetUpdate(BaseModel):
+    offset: int # in milliseconds
+
 
 class SystemStatusResponse(BaseModel):
     hdd_connected: bool
@@ -105,4 +141,27 @@ class DirectoryBrowseResponse(BaseModel):
     current_path: str
     parent_path: Optional[str] = None
     items: List[DirectoryItem]
+
+class LyricLine(BaseModel):
+    time: float # in seconds
+    text: str
+
+class LyricResponse(BaseModel):
+    song_id: int
+    lyrics_source: str # 'db', 'lrc', 'embedded', 'manual', 'unavailable'
+    plain_lyrics: Optional[str] = None
+    timed_lyrics: List[LyricLine] = []
+    is_synced: bool = False
+    language: Optional[str] = None
+    offset: int = 0 # in milliseconds
+    is_manual: bool = False
+    updated_at: Optional[datetime] = None
+
+class LyricCreate(BaseModel):
+    lrc_content: str
+    offset: Optional[int] = 0
+
+class LyricOffsetUpdate(BaseModel):
+    offset: int # in milliseconds
+
 

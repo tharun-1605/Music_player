@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/music_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../config/api_config.dart';
+import '../screens/player/player_screen.dart';
 
 class MiniPlayer extends ConsumerStatefulWidget {
   const MiniPlayer({super.key});
@@ -113,6 +114,7 @@ class _MiniPlayerState extends ConsumerState<MiniPlayer> {
       child: LayoutBuilder(
         builder: (context, constraints) {
           return GestureDetector(
+            onTap: () => PlayerScreen.open(context),
             onLongPressStart: (details) => _onLongPressStart(details, constraints),
             onLongPressMoveUpdate: (details) => _onLongPressMoveUpdate(details, constraints),
             onLongPressEnd: (details) => _onLongPressEnd(details, constraints),

@@ -6,13 +6,36 @@ import '../models/artist.dart';
 import '../models/album.dart';
 import '../models/playlist.dart';
 import '../models/system_status.dart';
+import '../models/lyric.dart';
 import '../main.dart';
 
+import '../services/download_service.dart';
+import '../services/equalizer_service.dart';
+import '../services/cast_service.dart';
+
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
+
+final downloadServiceProvider = ChangeNotifierProvider<DownloadService>((ref) {
+  return DownloadService();
+});
+
+final equalizerServiceProvider = ChangeNotifierProvider<EqualizerService>((ref) {
+  return EqualizerService();
+});
+
+final castServiceProvider = ChangeNotifierProvider<CastService>((ref) {
+  return CastService();
+});
 
 final audioPlayerServiceProvider = ChangeNotifierProvider<AudioPlayerService>((ref) {
   return globalAudioHandler;
 });
+
+final lyricsProvider = FutureProvider.family<SongLyrics, int>((ref, songId) async {
+  final api = ref.watch(apiServiceProvider);
+  return await api.getLyrics(songId);
+});
+
 
 final systemStatusProvider = FutureProvider<SystemStatus>((ref) async {
   final api = ref.watch(apiServiceProvider);

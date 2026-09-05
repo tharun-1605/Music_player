@@ -355,16 +355,32 @@ class AppTheme {
       // SNACKBAR
       // ========================================================
 
-      snackBarTheme: const SnackBarThemeData(
-        backgroundColor: surfaceColor,
-
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF1E293B).withValues(alpha: 0.95),
+        behavior: SnackBarBehavior.floating,
+        elevation: 8,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(
-            Radius.circular(4),
-          ),
-          side: BorderSide(
-            color: borderColor,
-          ),
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Colors.white12, width: 1),
+        ),
+        contentTextStyle: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+
+      // ========================================================
+      // BOTTOM SHEET
+      // ========================================================
+
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: surfaceColor,
+        surfaceTintColor: Colors.transparent,
+        elevation: 12,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
       ),
     );

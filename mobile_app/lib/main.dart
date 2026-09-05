@@ -27,6 +27,7 @@ void main() async {
         androidStopForegroundOnPause: true,
       ),
     );
+    await globalAudioHandler.restoreQueueState();
   } catch (e) {
     debugPrint('AudioService init fallback: $e');
   }

@@ -54,18 +54,21 @@ def get_replay_stats(db: Session = Depends(get_db)):
     
     duration_res = db.query(func.sum(Song.duration)).join(PlayHistory, Song.id == PlayHistory.song_id).scalar()
     total_seconds = duration_res or 0.0
-    total_minutes = round(total_seconds / 60.0, 1)
+    total_minutes = int(round(total_seconds / 60.0))
 
     now = datetime.utcnow()
+    month_name = now.strftime("%B")
+    month_year = f"{month_name} '{now.strftime('%y')}"
+
     month_start = datetime(now.year, now.month, 1)
     month_duration = db.query(func.sum(Song.duration)).join(PlayHistory, Song.id == PlayHistory.song_id).filter(PlayHistory.played_at >= month_start).scalar()
-    month_minutes = round((month_duration or 0.0) / 60.0, 1)
+    month_minutes = int(round((month_duration or 0.0) / 60.0))
 
     top_song_counts = db.query(Song, func.count(PlayHistory.id).label("play_count"))\
         .join(PlayHistory, Song.id == PlayHistory.song_id)\
         .group_by(Song.id)\
         .order_by(desc("play_count"))\
-        .limit(5).all()
+        .limit(10).all()
 
     fav_ids = set(f.song_id for f in db.query(Favorite.song_id).all())
     top_songs = []
@@ -79,21 +82,37 @@ def get_replay_stats(db: Session = Depends(get_db)):
         .filter(Song.album != "Unknown Album")\
         .group_by(Song.album)\
         .order_by(desc("play_count"))\
-        .limit(5).all()
+        .limit(10).all()
     top_albums = [{"album": alb, "play_count": cnt} for alb, cnt in top_album_counts]
 
-    top_artist_counts = db.query(Song.artist, func.count(PlayHistory.id).label("play_count"))\
-        .join(PlayHistory, Song.id == PlayHistory.song_id)\
-        .filter(Song.artist != "Unknown Artist")\
-        .group_by(Song.artist)\
-        .order_by(desc("play_count"))\
-        .limit(5).all()
-    top_artists = [{"artist": art, "play_count": cnt} for art, cnt in top_artist_counts]
+    top_artist_counts = db.query(
+        Song.artist,
+        func.count(PlayHistory.id).label("play_count"),
+        func.sum(Song.duration).label("total_sec")
+    ).join(PlayHistory, Song.id == PlayHistory.song_id)\
+     .filter(Song.artist != "Unknown Artist")\
+     .group_by(Song.artist)\
+     .order_by(desc("play_count"))\
+     .limit(10).all()
+
+    top_artists = []
+    for art, cnt, total_sec in top_artist_counts:
+        mins = int(round((total_sec or 0.0) / 60.0))
+        sample_song = db.query(Song).filter(Song.artist == art).first()
+        cover_song_id = sample_song.id if sample_song else None
+        top_artists.append({
+            "artist": art,
+            "play_count": cnt,
+            "minutes": mins,
+            "song_id": cover_song_id
+        })
 
     return {
         "total_plays": total_plays,
         "total_minutes": total_minutes,
         "month_minutes": month_minutes,
+        "month_name": month_name,
+        "month_year": month_year,
         "top_songs": top_songs,
         "top_albums": top_albums,
         "top_artists": top_artists

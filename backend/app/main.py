@@ -3,15 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
-from app.database import engine, Base, SessionLocal
+from app.database import engine, Base, SessionLocal, init_db_schema
 from app.models import Song
 from app.scanner import scanner_instance
 from app.mdns import mdns_instance
 
-from app.api import system, songs, artists, albums, search, playlists, favorites, history
+from app.api import system, songs, artists, albums, search, playlists, favorites, history, lyrics
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize DB schema & columns
+    init_db_schema()
+
     # Create DB tables
     Base.metadata.create_all(bind=engine)
 
@@ -34,10 +37,11 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Enable CORS for local network clients
+# Enable CORS for local network & web clients
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -52,3 +56,5 @@ app.include_router(search.router)
 app.include_router(playlists.router)
 app.include_router(favorites.router)
 app.include_router(history.router)
+app.include_router(lyrics.router)
+

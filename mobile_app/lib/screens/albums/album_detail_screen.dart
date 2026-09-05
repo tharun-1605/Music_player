@@ -6,6 +6,7 @@ import '../../providers/music_providers.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/artwork.dart';
 import '../../widgets/song_tile.dart';
+import '../../widgets/add_to_playlist_dialog.dart';
 
 class AlbumDetailScreen extends ConsumerWidget {
   final Album album;
@@ -17,9 +18,35 @@ class AlbumDetailScreen extends ConsumerWidget {
     final api = ref.watch(apiServiceProvider);
     final playerService = ref.watch(audioPlayerServiceProvider);
 
+    final downloadService = ref.watch(downloadServiceProvider);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(album.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download_outlined),
+            tooltip: 'Download Album',
+            onPressed: () async {
+              final songs = await api.getAlbumSongs(album.id);
+              if (songs.isNotEmpty) {
+                downloadService.downloadAlbum(songs);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Downloading ${songs.length} tracks from ${album.title}...')),
+                  );
+                }
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.playlist_add),
+            tooltip: 'Add Album to Playlist',
+            onPressed: () {
+              showAddAlbumToPlaylistBottomSheet(context, ref, album);
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<List<Song>>(
         future: api.getAlbumSongs(album.id),

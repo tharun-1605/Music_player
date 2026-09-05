@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../models/song.dart';
 import '../models/artist.dart';
 import '../models/album.dart';
 import '../models/playlist.dart';
 import '../models/system_status.dart';
+import '../models/lyric.dart';
 
 class ConnectionTestResult {
   final bool isConnected;
@@ -246,5 +248,136 @@ class ApiService {
       "top_artists": []
     };
   }
+
+  Future<SongLyrics> getLyrics(int songId) async {
+    try {
+      final res = await _client.get(Uri.parse('${ApiConfig.apiBaseUrl}/songs/$songId/lyrics'));
+      if (res.statusCode == 200) {
+        final parsed = SongLyrics.fromJson(jsonDecode(res.body));
+        if (parsed.lyricsSource != 'unavailable') {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+
+    // Try reading local SharedPreferences backup
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final localRaw = prefs.getString('local_lrc_$songId');
+      final localOffset = prefs.getInt('local_lrc_offset_$songId') ?? 0;
+      if (localRaw != null && localRaw.trim().isNotEmpty) {
+        return SongLyrics.parseLrcString(songId, localRaw, offset: localOffset);
+      }
+    } catch (_) {}
+
+    return SongLyrics(songId: songId, lyricsSource: 'unavailable');
+  }
+
+  Future<SongLyrics> saveLyrics(int songId, String lrcContent, {int offset = 0}) async {
+    // 1. Save to local SharedPreferences immediately
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('local_lrc_$songId', lrcContent);
+      await prefs.setInt('local_lrc_offset_$songId', offset);
+    } catch (_) {}
+
+    // 2. Post to backend
+    try {
+      final res = await _client.post(
+        Uri.parse('${ApiConfig.apiBaseUrl}/songs/$songId/lyrics'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'lrc_content': lrcContent,
+          'offset': offset,
+        }),
+      );
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final parsed = SongLyrics.fromJson(jsonDecode(res.body));
+        if (parsed.lyricsSource != 'unavailable') {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: return locally parsed lyrics
+    return SongLyrics.parseLrcString(songId, lrcContent, offset: offset);
+  }
+
+  Future<SongLyrics> updateLyricsOffset(int songId, int offset) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('local_lrc_offset_$songId', offset);
+    } catch (_) {}
+
+    try {
+      final res = await _client.patch(
+        Uri.parse('${ApiConfig.apiBaseUrl}/songs/$songId/lyrics/offset'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'offset': offset}),
+      );
+      if (res.statusCode == 200) {
+        return SongLyrics.fromJson(jsonDecode(res.body));
+      }
+    } catch (_) {}
+    return getLyrics(songId);
+  }
+
+  Future<void> deleteLyrics(int songId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('local_lrc_$songId');
+      await prefs.remove('local_lrc_offset_$songId');
+    } catch (_) {}
+    try {
+      await _client.delete(Uri.parse('${ApiConfig.apiBaseUrl}/songs/$songId/lyrics'));
+    } catch (_) {}
+  }
+
+  Future<SongLyrics> refetchLyrics(int songId) async {
+    try {
+      final res = await _client.post(Uri.parse('${ApiConfig.apiBaseUrl}/songs/$songId/lyrics/refetch'));
+      if (res.statusCode == 200) {
+        final parsed = SongLyrics.fromJson(jsonDecode(res.body));
+        if (parsed.lyricsSource != 'unavailable') {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return getLyrics(songId);
+  }
+
+  Future<Playlist> renamePlaylist(int playlistId, String newName) async {
+    final res = await _client.put(
+      Uri.parse('${ApiConfig.apiBaseUrl}/playlists/$playlistId'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'name': newName}),
+    );
+    if (res.statusCode == 200) {
+      return Playlist.fromJson(jsonDecode(res.body));
+    }
+    throw Exception('Failed to rename playlist');
+  }
+
+  Future<void> addAlbumToPlaylist(int playlistId, int albumId) async {
+    await _client.post(Uri.parse('${ApiConfig.apiBaseUrl}/playlists/$playlistId/album/$albumId'));
+  }
+
+  Future<void> addBatchToPlaylist(int playlistId, List<int> songIds) async {
+    await _client.post(
+      Uri.parse('${ApiConfig.apiBaseUrl}/playlists/$playlistId/songs/batch'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'song_ids': songIds}),
+    );
+  }
+
+  Future<void> reorderPlaylist(int playlistId, List<int> songIds) async {
+    await _client.put(
+      Uri.parse('${ApiConfig.apiBaseUrl}/playlists/$playlistId/reorder'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'song_ids': songIds}),
+    );
+  }
 }
+
+
 
