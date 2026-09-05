@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 import '../models/song.dart';
+import 'notification_service.dart';
 
 enum DownloadStatus { idle, downloading, completed, failed, paused }
 
@@ -141,8 +142,18 @@ class DownloadService extends ChangeNotifier {
     return downloadsDir;
   }
 
-  Future<void> downloadSong(Song song) async {
+  Future<void> downloadSong(Song song, {bool showIndividualNotification = true}) async {
     if (isDownloaded(song.id)) return;
+
+    if (showIndividualNotification) {
+      await NotificationService().requestNotificationPermissions();
+      await NotificationService().showDownloadProgress(
+        id: song.id,
+        title: 'Downloading Track',
+        body: '${song.title} (0%)',
+        progress: 0,
+      );
+    }
 
     final task = DownloadTask(
       song: song,
@@ -170,6 +181,13 @@ class DownloadService extends ChangeNotifier {
         _downloadedPaths[song.id] = task.localPath!;
         await _saveMetadataToPrefs();
         notifyListeners();
+        if (showIndividualNotification) {
+          await NotificationService().showDownloadCompleted(
+            id: song.id,
+            title: 'Download Complete',
+            body: '${song.title} downloaded successfully',
+          );
+        }
         return;
       }
 
@@ -180,18 +198,32 @@ class DownloadService extends ChangeNotifier {
 
       final sink = tmpFile.openWrite();
       int downloaded = 0;
+      int lastNotificationProgress = -1;
 
       await response.stream.listen(
         (chunk) {
           sink.add(chunk);
           downloaded += chunk.length;
           task.downloadedBytes = downloaded;
+          int currentProgress = 0;
           if (song.fileSize > 0) {
             task.progress = (downloaded / song.fileSize).clamp(0.0, 1.0);
+            currentProgress = (task.progress * 100).toInt();
           } else {
             task.progress = 0.5;
+            currentProgress = 50;
           }
           notifyListeners();
+
+          if (showIndividualNotification && currentProgress >= lastNotificationProgress + 5) {
+            lastNotificationProgress = currentProgress;
+            NotificationService().showDownloadProgress(
+              id: song.id,
+              title: 'Downloading Track',
+              body: '${song.title} ($currentProgress%)',
+              progress: currentProgress,
+            );
+          }
         },
         cancelOnError: true,
       ).asFuture();
@@ -209,6 +241,14 @@ class DownloadService extends ChangeNotifier {
 
         await _saveMetadataToPrefs();
         notifyListeners();
+
+        if (showIndividualNotification) {
+          await NotificationService().showDownloadCompleted(
+            id: song.id,
+            title: 'Download Complete',
+            body: '${song.title} downloaded successfully',
+          );
+        }
       } else {
         throw Exception('Temporary download file missing');
       }
@@ -217,19 +257,55 @@ class DownloadService extends ChangeNotifier {
       task.status = DownloadStatus.failed;
       task.errorMessage = e.toString();
       notifyListeners();
+
+      if (showIndividualNotification) {
+        await NotificationService().showDownloadCompleted(
+          id: song.id,
+          title: 'Download Failed',
+          body: 'Failed to download ${song.title}',
+        );
+      }
     }
   }
 
-  Future<void> downloadAlbum(List<Song> songs) async {
-    for (final song in songs) {
-      await downloadSong(song);
-    }
+  Future<void> downloadAlbum(List<Song> songs, {String title = 'Album'}) async {
+    await downloadPlaylist(songs, title: title);
   }
 
-  Future<void> downloadPlaylist(List<Song> songs) async {
-    for (final song in songs) {
-      await downloadSong(song);
+  Future<void> downloadPlaylist(List<Song> songs, {String title = 'Playlist'}) async {
+    if (songs.isEmpty) return;
+
+    await NotificationService().requestNotificationPermissions();
+    const notificationId = 8888;
+    int completedCount = 0;
+    final totalCount = songs.length;
+
+    await NotificationService().showDownloadProgress(
+      id: notificationId,
+      title: 'Downloading $title',
+      body: '0 of $totalCount tracks (0%)',
+      progress: 0,
+    );
+
+    for (int i = 0; i < songs.length; i++) {
+      final song = songs[i];
+      await downloadSong(song, showIndividualNotification: false);
+      completedCount++;
+      final overallPercent = ((completedCount / totalCount) * 100).toInt();
+
+      await NotificationService().showDownloadProgress(
+        id: notificationId,
+        title: 'Downloading $title',
+        body: '$completedCount of $totalCount tracks ($overallPercent%)',
+        progress: overallPercent,
+      );
     }
+
+    await NotificationService().showDownloadCompleted(
+      id: notificationId,
+      title: '$title Downloaded',
+      body: 'Successfully downloaded $completedCount of $totalCount tracks',
+    );
   }
 
   Future<void> removeDownload(int songId) async {

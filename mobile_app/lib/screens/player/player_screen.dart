@@ -389,10 +389,10 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
               Expanded(
                 child: GestureDetector(
                   behavior: HitTestBehavior.translucent,
-                  onPanStart: (details) {
+                  onVerticalDragStart: (details) {
                     _panStartOffset = details.globalPosition;
                   },
-                  onPanUpdate: (details) {
+                  onVerticalDragUpdate: (details) {
                     if (_panStartOffset == null) return;
                     final screenWidth = MediaQuery.of(context).size.width;
                     final screenHeight = MediaQuery.of(context).size.height;
@@ -418,13 +418,11 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                     }
 
                     // 3. Vertical Drag -> Volume Control
-                    if (details.delta.dy.abs() > details.delta.dx.abs() * 1.5) {
-                      final currentVol = player.volume;
-                      final deltaVol = -details.delta.dy / 250.0;
-                      final newVol = (currentVol + deltaVol).clamp(0.0, 1.0);
-                      player.setVolume(newVol);
-                      _triggerVolumeOverlay(newVol);
-                    }
+                    final currentVol = player.volume;
+                    final deltaVol = -details.delta.dy / 250.0;
+                    final newVol = (currentVol + deltaVol).clamp(0.0, 1.0);
+                    player.setVolume(newVol);
+                    _triggerVolumeOverlay(newVol);
                   },
                   child: Stack(
                     children: [
@@ -459,22 +457,23 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                                 child: Container(
                                   width: 52,
                                   height: 190,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                                   decoration: BoxDecoration(
                                     color: Colors.black.withValues(alpha: 0.55),
                                     borderRadius: BorderRadius.circular(20),
                                     border: Border.all(color: Colors.white24, width: 1),
                                   ),
                                   child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
                                       Icon(
                                         _overlayVolumeLevel == 0.0
                                             ? Icons.volume_off
                                             : (_overlayVolumeLevel < 0.5 ? Icons.volume_down : Icons.volume_up),
                                         color: AppTheme.primaryAccent,
-                                        size: 20,
+                                        size: 18,
                                       ),
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 6),
                                       Expanded(
                                         child: RotatedBox(
                                           quarterTurns: 3,
@@ -486,12 +485,12 @@ class _PlayerScreenState extends ConsumerState<PlayerScreen> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 10),
+                                      const SizedBox(height: 6),
                                       Text(
                                         '${(_overlayVolumeLevel * 100).toInt()}%',
                                         style: const TextStyle(
                                           color: Colors.white,
-                                          fontSize: 11,
+                                          fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
@@ -834,6 +833,7 @@ class ArtworkCarousel extends StatefulWidget {
 
 class _ArtworkCarouselState extends State<ArtworkCarousel> {
   late PageController _pageController;
+  bool _isUserScrolling = false;
 
   @override
   void initState() {
@@ -848,7 +848,7 @@ class _ArtworkCarouselState extends State<ArtworkCarousel> {
   @override
   void didUpdateWidget(ArtworkCarousel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.currentIndex != oldWidget.currentIndex && _pageController.hasClients) {
+    if (!_isUserScrolling && widget.currentIndex != oldWidget.currentIndex && _pageController.hasClients) {
       final currentPage = _pageController.page?.round() ?? -1;
       if (currentPage != widget.currentIndex) {
         _pageController.animateToPage(
@@ -872,59 +872,76 @@ class _ArtworkCarouselState extends State<ArtworkCarousel> {
       return const SizedBox.shrink();
     }
 
-    return PageView.builder(
-      controller: _pageController,
-      itemCount: widget.playlist.length,
-      onPageChanged: (index) {
-        if (index != widget.currentIndex) {
-          widget.onSongChanged(index);
-        }
-      },
-      itemBuilder: (context, index) {
-        final song = widget.playlist[index];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardSize = min(
+          MediaQuery.of(context).size.width * 0.76,
+          constraints.maxHeight > 0 ? constraints.maxHeight * 0.85 : 300.0,
+        );
 
-        return AnimatedBuilder(
-          animation: _pageController,
-          builder: (context, child) {
-            double scale = 1.0;
-            double opacity = 1.0;
-            if (_pageController.position.haveDimensions) {
-              final pageOffset = (_pageController.page! - index).abs();
-              scale = (1 - (pageOffset * 0.18)).clamp(0.78, 1.0);
-              opacity = (1 - (pageOffset * 0.45)).clamp(0.4, 1.0);
-            } else {
-              scale = index == widget.currentIndex ? 1.0 : 0.82;
-              opacity = index == widget.currentIndex ? 1.0 : 0.55;
+        return NotificationListener<ScrollNotification>(
+          onNotification: (notification) {
+            if (notification is ScrollStartNotification) {
+              _isUserScrolling = true;
+            } else if (notification is ScrollEndNotification) {
+              _isUserScrolling = false;
             }
-
-            final cardSize = MediaQuery.of(context).size.width * 0.76;
-
-            return Center(
-              child: Transform.scale(
-                scale: scale,
-                child: Opacity(
-                  opacity: opacity,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.6 * opacity),
-                          blurRadius: 32 * scale,
-                          offset: Offset(0, 14 * scale),
-                        ),
-                      ],
-                    ),
-                    child: ArtworkImage(
-                      songId: song.id,
-                      size: cardSize,
-                      borderRadius: 20,
-                    ),
-                  ),
-                ),
-              ),
-            );
+            return false;
           },
+          child: PageView.builder(
+            controller: _pageController,
+            itemCount: widget.playlist.length,
+            onPageChanged: (index) {
+              if (index != widget.currentIndex) {
+                widget.onSongChanged(index);
+              }
+            },
+            itemBuilder: (context, index) {
+              final song = widget.playlist[index];
+
+              return AnimatedBuilder(
+                animation: _pageController,
+                builder: (context, child) {
+                  double scale = 1.0;
+                  double opacity = 1.0;
+                  if (_pageController.position.haveDimensions) {
+                    final pageOffset = (_pageController.page! - index).abs();
+                    scale = (1 - (pageOffset * 0.18)).clamp(0.78, 1.0);
+                    opacity = (1 - (pageOffset * 0.45)).clamp(0.4, 1.0);
+                  } else {
+                    scale = index == widget.currentIndex ? 1.0 : 0.82;
+                    opacity = index == widget.currentIndex ? 1.0 : 0.55;
+                  }
+
+                  return Center(
+                    child: Transform.scale(
+                      scale: scale,
+                      child: Opacity(
+                        opacity: opacity,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.6 * opacity),
+                                blurRadius: 32 * scale,
+                                offset: Offset(0, 14 * scale),
+                              ),
+                            ],
+                          ),
+                          child: ArtworkImage(
+                            songId: song.id,
+                            size: cardSize,
+                            borderRadius: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         );
       },
     );

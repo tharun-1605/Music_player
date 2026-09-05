@@ -20,6 +20,7 @@ dependencies:
   palette_generator: ^0.3.3+7
   path_provider: ^2.1.6
   file_picker: ^8.1.7
+  flutter_local_notifications: ^17.2.1
 
 dev_dependencies:
 
