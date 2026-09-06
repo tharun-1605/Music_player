@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   static const String _keyBaseUrl = 'server_base_url';
-  static const String defaultUrl = 'http://localhost:8000';
+  static const String defaultUrl = 'http://192.168.1.48:8000';
 
   static String _baseUrl = defaultUrl;
 
@@ -30,7 +30,13 @@ class ApiConfig {
 
   static Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
-    _baseUrl = prefs.getString(_keyBaseUrl) ?? defaultUrl;
+    final saved = prefs.getString(_keyBaseUrl) ?? defaultUrl;
+    // Replace localhost (only valid on web/desktop) with the real server URL for Android
+    if (saved.contains('localhost') || saved.contains('127.0.0.1')) {
+      _baseUrl = defaultUrl;
+    } else {
+      _baseUrl = saved;
+    }
   }
 
   static Future<void> setBaseUrl(String url) async {
